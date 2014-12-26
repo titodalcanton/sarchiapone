@@ -2,6 +2,7 @@
 # Utility for automatically recording signals from satellite passes
 # 2014 Tito Dal Canton
 
+import sys
 import time
 import subprocess
 import logging
@@ -46,7 +47,7 @@ class Satellite:
         return Pass(np, self)
 
     def __str__(self):
-        return self.tle_name
+        return self.output_prefix
 
 
 class Pass:
@@ -75,8 +76,7 @@ class Pass:
 class Receiver:
     "Models a program that can record a frequency band to a file."
 
-    def __init__(self, latitude, longitude, elevation,
-                 output_base='./'):
+    def __init__(self, latitude, longitude, elevation, output_base='./'):
         self.proc = None
         self.frequency = None
         self.observer = ephem.Observer()
@@ -88,17 +88,21 @@ class Receiver:
     def start(self, frequency, prefix):
         self.frequency = frequency
         now = time.strftime('%Y%m%d-%H%M%S')
+        iq_file_path = '%s/%s-%s-iq.wav' % (self.output_base, prefix, now)
+        demod_file_path = '%s/%s-%s-demod.wav' % (self.output_base, prefix, now)
         args = ['./noaa_apt_rec.py',
                 '--frequency', frequency,
-                '--output-path', '%s/%s-%s-demod.wav' % (self.output_base, prefix, now),
-                '--iq-output-path', '%s/%s-%s-iq.wav' % (self.output_base, prefix, now)]
+                '--output-path', demod_file_path,
+                '--iq-output-path', iq_file_path]
         self.proc = subprocess.Popen(args)
 
     def stop(self):
         self.proc.terminate()
         self.proc.wait()
-        if self.proc.returncode != 0:
-            logging.warning('Receiver process terminated with code %d', self.proc.returncode)
+        if not self.proc.returncode in [0, -15]:
+            # for unknown reasons, normal termination returns -15
+            logging.warning('Receiver process terminated with code %d',
+                            self.proc.returncode)
         self.proc = None
         self.frequency = None
 
@@ -109,10 +113,11 @@ class Receiver:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s',
                     datefmt='%F %T')
 
-satellites = []
-
 config = ConfigParser.ConfigParser()
-config.read('sarchiapone.ini')
+config.read(sys.argv[1])
+
+# load satellites to monitor
+satellites = []
 for section in config.sections():
     if section.startswith('sat:'):
         sat = Satellite(config.get(section, 'tle_label'),
@@ -121,6 +126,7 @@ for section in config.sections():
                         section.replace('sat:', ''))
         satellites.append(sat)
 
+# load receiver definition
 receiver = Receiver(config.get('receiver', 'latitude'),
                     config.get('receiver', 'longitude'),
                     config.get('receiver', 'elevation'))
