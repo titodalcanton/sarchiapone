@@ -8,6 +8,7 @@ import logging
 import urllib2
 import itertools
 import math
+import ConfigParser
 import ephem
 
 
@@ -74,14 +75,14 @@ class Pass:
 class Receiver:
     "Models a program that can record a frequency band to a file."
 
-    def __init__(self, latitude='52.38859', longitude='9.71630', elevation=55.,
+    def __init__(self, latitude, longitude, elevation,
                  output_base='./'):
         self.proc = None
         self.frequency = None
         self.observer = ephem.Observer()
         self.observer.lat = ephem.degrees(latitude)
         self.observer.long = ephem.degrees(longitude)
-        self.observer.elevation = elevation
+        self.observer.elevation = float(elevation)
         self.output_base = output_base
 
     def start(self, frequency, prefix):
@@ -108,20 +109,23 @@ class Receiver:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s',
                     datefmt='%F %T')
 
-satellites = [
-    Satellite('ISS (ZARYA)', 'stations.txt', '145.8', 'iss_sstv'),
-    Satellite('NOAA 15', 'weather.txt', '137.62', 'noaa15'),
-    Satellite('NOAA 18', 'weather.txt', '137.9125', 'noaa18'),
-    Satellite('NOAA 19', 'weather.txt', '137.1', 'noaa19'),
-    Satellite('NOAA 9 [P]', 'noaa.txt', '137.505', 'noaa9'),
-    Satellite('METEOR-M 2', 'weather.txt', '137.1', 'meteorm2'),
-    Satellite('ISIS 1', 'visual.txt', '136.41', 'isis1'),
-    #Satellite('OSCAR 7 (AO-7)', 'amateur.txt', '145.9775', 'ao7'),
-    #Satellite('HAMSAT (VO-52)', 'amateur.txt', '145.86', 'vo52'),
-    #Satellite('ORBCOMM FM32 [+]', 'orbcomm.txt', '137.7', 'orbcomm_fm32')
-]
+satellites = []
+
+config = ConfigParser.ConfigParser()
+config.read('sarchiapone.ini')
+for section in config.sections():
+    if section.startswith('sat:'):
+        sat = Satellite(config.get(section, 'tle_label'),
+                        config.get(section, 'tle_file'),
+                        config.get(section, 'frequency'),
+                        section.replace('sat:', ''))
+        satellites.append(sat)
+
+receiver = Receiver(config.get('receiver', 'latitude'),
+                    config.get('receiver', 'longitude'),
+                    config.get('receiver', 'elevation'))
+
 passes = []
-receiver = Receiver()
 
 logging.info('Starting monitor')
 while True:
