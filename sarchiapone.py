@@ -76,7 +76,7 @@ class Pass:
 class Receiver:
     "Models a program that can record a frequency band to a file."
 
-    def __init__(self, latitude, longitude, elevation, output_base='./'):
+    def __init__(self, latitude, longitude, elevation, output_base):
         self.proc = None
         self.frequency = None
         self.observer = ephem.Observer()
@@ -113,6 +113,7 @@ class Receiver:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s',
                     datefmt='%F %T')
 
+logging.info('Reading configuration')
 config = ConfigParser.ConfigParser()
 config.read(sys.argv[1])
 
@@ -129,7 +130,8 @@ for section in config.sections():
 # load receiver definition
 receiver = Receiver(config.get('receiver', 'latitude'),
                     config.get('receiver', 'longitude'),
-                    config.get('receiver', 'elevation'))
+                    config.get('receiver', 'elevation'),
+                    config.get('receiver', 'output_path'))
 
 passes = []
 
@@ -143,12 +145,12 @@ while True:
         if t > sat.next_check_time:
             np = sat.next_pass(receiver.observer)
             if np.interesting:
-                logging.info('%s: interesting pass with TCA %s, scheduling',
-                             sat, ephem.localtime(np.tca))
+                logging.info('%s: interesting pass with TCA %s and max altitude %f, scheduling',
+                             sat, ephem.localtime(np.tca), np.max_elevation)
                 passes.append(np)
             else:
-                logging.info('%s: ongoing or low pass with TCA %s, skipping',
-                             sat, ephem.localtime(np.tca))
+                logging.debug('%s: ongoing or low pass with TCA %s, skipping',
+                              sat, ephem.localtime(np.tca))
             sat.next_check_time = ephem.Date(np.end + ephem.minute)
 
     # handle scheduled or active passes
