@@ -181,4 +181,7 @@ while True:
                     raise RuntimeError('This should not happen!')
                 passes.remove(p)
 
-    time.sleep(3)
+    try:
+        time.sleep(3)
+    except KeyboardInterrupt:
+        break
