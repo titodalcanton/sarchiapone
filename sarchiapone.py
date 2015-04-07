@@ -76,13 +76,14 @@ class Pass:
 class Receiver:
     "Models a program that can record a frequency band to a file."
 
-    def __init__(self, latitude, longitude, elevation, output_base):
+    def __init__(self, latitude, longitude, elevation, horizon, output_base):
         self.proc = None
         self.frequency = None
         self.observer = ephem.Observer()
         self.observer.lat = ephem.degrees(latitude)
         self.observer.long = ephem.degrees(longitude)
         self.observer.elevation = float(elevation)
+        self.observer.horizon = ephem.degrees(horizon)
         self.output_base = output_base
 
     def start(self, frequency, prefix):
@@ -131,6 +132,7 @@ for section in config.sections():
 receiver = Receiver(config.get('receiver', 'latitude'),
                     config.get('receiver', 'longitude'),
                     config.get('receiver', 'elevation'),
+                    config.get('receiver', 'horizon'),
                     config.get('receiver', 'output_path'))
 
 passes = []
