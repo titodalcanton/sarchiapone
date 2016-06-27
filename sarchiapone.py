@@ -89,12 +89,12 @@ class Receiver:
     def start(self, frequency, prefix):
         self.frequency = frequency
         now = time.strftime('%Y%m%d-%H%M%S')
-        iq_file_path = '%s/%s-%s-iq.wav' % (self.output_base, prefix, now)
-        demod_file_path = '%s/%s-%s-demod.wav' % (self.output_base, prefix, now)
+        self.iq_file_path = '%s/%s-%s-iq.wav' % (self.output_base, prefix, now)
+        self.demod_file_path = '%s/%s-%s-demod.wav' % (self.output_base, prefix, now)
         args = ['./noaa_apt_rec.py',
                 '--frequency', frequency,
-                '--output-path', demod_file_path,
-                '--iq-output-path', iq_file_path]
+                '--output-path', self.demod_file_path,
+                '--iq-output-path', self.iq_file_path]
         self.proc = subprocess.Popen(args)
 
     def stop(self):
@@ -184,6 +184,6 @@ while True:
                 passes.remove(p)
 
     try:
-        time.sleep(3)
+        time.sleep(1)
     except KeyboardInterrupt:
         break
